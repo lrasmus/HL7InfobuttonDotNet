@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using HL7InfobuttonAPI.Models;
 using System.Collections.Specialized;
+using System.Net;
 
 namespace HL7InfobuttonAPI
 {
@@ -11,14 +12,22 @@ namespace HL7InfobuttonAPI
     {
         public KnowledgeRequestNotification ParseRequest(string parameters)
         {
+            return ParseRequest(SplitStringParameters(parameters));
+        }
+
+        public NameValueCollection SplitStringParameters(string parameters)
+        {
             var collection = new NameValueCollection();
             var pairs = parameters.Split('&');
             foreach (var pair in pairs)
             {
                 var item = pair.Split('=');
-                collection.Add(item[0], item[1]);
+                if (item.Length >= 2)
+                {
+                    collection.Add(item[0], item[1]);
+                }
             }
-            return ParseRequest(collection);
+            return collection;
         }
 
         public KnowledgeRequestNotification ParseRequest(NameValueCollection parameters)
@@ -119,6 +128,11 @@ namespace HL7InfobuttonAPI
         private void SetProperty(object container, string property, object value)
         {
             var type = container.GetType();
+            if (value is string)
+            {
+                value = Uri.UnescapeDataString((value as string).Replace("+", "%20"));
+                //value = WebUtility.HtmlDecode((value as string).Replace("+", "%20"));
+            }
             type.GetProperty(property).SetValue(container, value, null);
         }
 
@@ -158,15 +172,15 @@ namespace HL7InfobuttonAPI
                 return;
             }
 
-            string partName = keyParts.First();
+            string partName = MapParameterNameToStandardizedName(keyParts.First());
             switch (partName)
             {
                 case "knowledgeRequestNotification":
                     AddPart(container, keyParts.Skip(1), value);
                     break;
-                //case "assignedAuthorizedPerson":
-                //case "representedOrganization":
-                //case "assignedEntity":
+                    //case "assignedAuthorizedPerson":
+                    //case "representedOrganization":
+                    //case "assignedEntity":
                 case "administrativeGenderCode":
                 case "taskContext":
                 case "effectiveTime":
@@ -177,11 +191,13 @@ namespace HL7InfobuttonAPI
                 case "observation":
                 case "locationOfInterest":
                 case "addr":
+                case "holder":
+                case "assignedEntity":
                     AddPart(GetProperty(container, UppercaseFirst(partName)), keyParts.Skip(1), value);
                     break;
 
-                // Both subTopic and mainSearchCriteria have deprecated values that previously used "code", and now use "value".
-                // Instead of having both structured in those data models, we are going to map "code" references to "value".
+                    // Both subTopic and mainSearchCriteria have deprecated values that previously used "code", and now use "value".
+                    // Instead of having both structured in those data models, we are going to map "code" references to "value".
                 case "subTopic":
                 case "mainSearchCriteria":
                     if (keyParts.Count() > 2 && keyParts.Skip(1).First() == "c")
@@ -198,25 +214,28 @@ namespace HL7InfobuttonAPI
                     AddPart(GetProperty(container, "ID"), keyParts.Skip(1), value);
                     break;
 
-                case "severityObservation": { 
-                    var notification = container as KnowledgeRequestNotification;
-                    if (notification.MainSearchCriteria == null)
+                case "severityObservation":
                     {
-                        notification.MainSearchCriteria = new MainSearchCriteria();
+                        var notification = container as KnowledgeRequestNotification;
+                        if (notification.MainSearchCriteria == null)
+                        {
+                            notification.MainSearchCriteria = new MainSearchCriteria();
+                        }
+                        AddPart(GetProperty(notification.MainSearchCriteria, "SeverityObservation"), keyParts.Skip(1),
+                                value);
+                        break;
                     }
-                    AddPart(GetProperty(notification.MainSearchCriteria, "SeverityObservation"), keyParts.Skip(1), value);
-                    break;
-                }
 
-                case "serviceDeliveryLocation": { 
-                    var notification = container as KnowledgeRequestNotification;
-                    if (notification.Encounter == null)
+                case "serviceDeliveryLocation":
                     {
-                        notification.Encounter = new Encounter();
+                        var notification = container as KnowledgeRequestNotification;
+                        if (notification.Encounter == null)
+                        {
+                            notification.Encounter = new Encounter();
+                        }
+                        AddPart(GetProperty(notification.Encounter, "ServiceDeliveryLocation"), keyParts.Skip(1), value);
+                        break;
                     }
-                    AddPart(GetProperty(notification.Encounter, "ServiceDeliveryLocation"), keyParts.Skip(1), value);
-                    break;
-                }
 
                 case "informationRecipient":
                     if (keyParts.Count() > 1)
@@ -234,7 +253,7 @@ namespace HL7InfobuttonAPI
                     }
                     break;
 
-                // TODO - refactor this w/ informationRecipient case above
+                    // TODO - refactor this w/ informationRecipient case above
                 case "performer":
                     if (keyParts.Count() > 1)
                     {
@@ -315,36 +334,184 @@ namespace HL7InfobuttonAPI
                     SetProperty(container, "State", value);
                     break;
 
-                //informationRecipient=PAT|PROV|PAYOR                  x
-                //informationRecipient.healthCareProvider.c.c
-                //informationRecipient.healthCareProvider.c.cs
-                //informationRecipient.healthCareProvider.c.dn
-                //informationRecipient.languageCode.c
+                    //informationRecipient=PAT|PROV|PAYOR                  x
+                    //informationRecipient.healthCareProvider.c.c
+                    //informationRecipient.healthCareProvider.c.cs
+                    //informationRecipient.healthCareProvider.c.dn
+                    //informationRecipient.languageCode.c
 
-                //performer=PAT|PROV|PAYOR                        x
-                //performer.healthCareProvider.c.c
-                //performer.healthCareProvider.c.cs
-                //performer.healthCareProvider.c.dn
-                //performer.languageCode.c
+                    //performer=PAT|PROV|PAYOR                        x
+                    //performer.healthCareProvider.c.c
+                    //performer.healthCareProvider.c.cs
+                    //performer.healthCareProvider.c.dn
+                    //performer.languageCode.c
 
-                //encounter.c.c                              x
-                //encounter.c.cs
-                //encounter.c.dn
+                    //encounter.c.c                              x
+                    //encounter.c.cs
+                    //encounter.c.dn
 
-                //serviceDeliveryLocation.id.root             x
+                    //serviceDeliveryLocation.id.root             x
 
-                //observation.c.c                              x
-                //observation.c.cs
-                //observation.c.dn
-                //observation.v.c
-                //observation.v.cs
-                //observation.v.dn
-                //observation.v.v
-                //observation.v.u
+                    //observation.c.c                              x
+                    //observation.c.cs
+                    //observation.c.dn
+                    //observation.v.c
+                    //observation.v.cs
+                    //observation.v.dn
+                    //observation.v.v
+                    //observation.v.u
 
-                //locationOfInterest.addr.postalCode              x
-                //locationOfInterest.addr.city
-                //locationOfInterest.addr.state
+                    //locationOfInterest.addr.postalCode              x
+                    //locationOfInterest.addr.city
+                    //locationOfInterest.addr.state
+            }
+        }
+
+        private string MapParameterNameToStandardizedName(string parameter)
+        {
+            if (parameter.Equals("knowledgeRequestNotification", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "knowledgeRequestNotification";
+            }
+            else if (parameter.Equals("administrativeGenderCode", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "administrativeGenderCode";
+            }
+            else if (parameter.Equals("taskContext", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "taskContext";
+            }
+            else if (parameter.Equals("effectiveTime", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "effectiveTime";
+            }
+            else if (parameter.Equals("interpretationCode", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "interpretationCode";
+            }
+            else if (parameter.Equals("healthCareProvider", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "healthCareProvider";
+            }
+            else if (parameter.Equals("languageCode", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "languageCode";
+            }
+            else if (parameter.Equals("encounter", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "encounter";
+            }
+            else if (parameter.Equals("observation", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "observation";
+            }
+            else if (parameter.Equals("locationOfInterest", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "locationOfInterest";
+            }
+            else if (parameter.Equals("addr", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "addr";
+            }
+            else if (parameter.Equals("subTopic", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "subTopic";
+            }
+            else if (parameter.Equals("mainSearchCriteria", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "mainSearchCriteria";
+            }
+            else if (parameter.Equals("id", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "id";
+            }
+            else if (parameter.Equals("severityObservation", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "severityObservation";
+            }
+            else if (parameter.Equals("serviceDeliveryLocation", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "serviceDeliveryLocation";
+            }
+            else if (parameter.Equals("informationRecipient", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "informationRecipient";
+            }
+            else if (parameter.Equals("performer", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "performer";
+            }
+            else if (parameter.Equals("patientPerson", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "patientPerson";
+            }
+            else if (parameter.Equals("ageGroup", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "ageGroup";
+            }
+            else if (parameter.Equals("age", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "age";
+            }
+            else if (parameter.Equals("n", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "n";
+            }
+            else if (parameter.Equals("certificateText", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "certificateText";
+            }
+            else if (parameter.Equals("root", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "root";
+            }
+            else if (parameter.Equals("c", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "c";
+            }
+            else if (parameter.Equals("cs", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "cs";
+            }
+            else if (parameter.Equals("dn", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "dn";
+            }
+            else if (parameter.Equals("v", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "v";
+            }
+            else if (parameter.Equals("u", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "u";
+            }
+            else if (parameter.Equals("ot", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "ot";
+            }
+            else if (parameter.Equals("postalCode", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "postalCode";
+            }
+            else if (parameter.Equals("city", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "city";
+            }
+            else if (parameter.Equals("state", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "state";
+            }
+            else if (parameter.Equals("holder", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "holder";
+            }
+            else if (parameter.Equals("assignedEntity", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return "assignedEntity";
+            }
+            else
+            {
+                return parameter;
             }
         }
     }

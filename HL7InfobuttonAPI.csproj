@@ -50,6 +50,7 @@
     <Compile Include="Models\EffectiveTime.cs" />
     <Compile Include="Models\Encounter.cs" />
     <Compile Include="Models\HealthcareProvider.cs" />
+    <Compile Include="Models\Holder.cs" />
     <Compile Include="Models\ID.cs" />
     <Compile Include="Models\KnowledgeRequestNotification.cs" />
     <Compile Include="Models\InformationRecipient.cs" />

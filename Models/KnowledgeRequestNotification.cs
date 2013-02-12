@@ -25,6 +25,7 @@ namespace HL7InfobuttonAPI.Models
         public PatientContext PatientContext { get; set; }
         public InformationRecipient InformationRecipient { get; set; }
 
+        public Holder Holder { get; set; }
         public Encounter Encounter { get; set; }
         public Observation Observation { get; set; }
         public LocationOfInterest LocationOfInterest { get; set; }

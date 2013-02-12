@@ -18,6 +18,7 @@ namespace HL7InfobuttonAPI.Models
     {
         public string Value { get; set; }
         public HealthcareProvider HealthCareProvider { get; set; }
+        public PatientPerson Patient { get; set; }
         public CodeType LanguageCode { get; set; }
     }
 }
