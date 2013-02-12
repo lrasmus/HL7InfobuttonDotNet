@@ -1,0 +1,8 @@
+# git ignore file
+*.suo
+Local.*
+*.testsettings
+TestResults
+packages
+bin
+obj
