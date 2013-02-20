@@ -35,6 +35,11 @@ namespace HL7InfobuttonAPI
             KnowledgeRequestNotification requestNotification = new KnowledgeRequestNotification();
             foreach (var parameter in parameters.AllKeys)
             {
+                if (parameter == null)
+                {
+                    continue;
+                }
+
                 string[] keyParts = parameter.Split('.');
                 AddPart(requestNotification, keyParts, parameters[parameter]);
             }

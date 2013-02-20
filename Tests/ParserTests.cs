@@ -200,7 +200,8 @@ namespace Tests
         public void HL7Guide_Example2()
         {
             const string Example2 = "knowledgeRequestNotification.effectiveTime.v=20060706001023&holder.assignedEntity.n=OrganizationUsername"
-             + "&holder.assignedEntity.certificateText=organizationpassword&patientPerson.administrativeGenderCode.c=F&age.v.v=8&age.v.u=a&taskContext.c.c=MEDLISTREV"
+             + "&holder.assignedEntity.certificateText=organizationpassword&patientPerson.administrativeGenderCode.c=F&patientPerson.administrativeGenderCode.cs=aGCCS"
+             + "&age.v.v=8&age.v.u=a&taskContext.c.c=MEDLISTREV"
              + "&performer=PROV&informationRecipient=PAT&performer.languageCode.c=en&informationRecipient.languageCode.c=es"
              + "&performer.healthCareProvider.c.c=163W00000X&performer.healthCareProvider.c.dn=Registered Nurse&mainSearchCriteria.v.c=49502-693-03"
              + "&mainSearchCriteria.v.cs=2.16.840.1.113883.6.69&mainSearchCriteria.v.dn=Albuterol+sulfate+inhalation+solution+1.25+mg&mainSearchCriteria.v.ot=Albuterol+sulfate";
@@ -211,6 +212,7 @@ namespace Tests
             Assert.AreEqual("OrganizationUsername", requestNotification.Holder.AssignedEntity.Name);
             Assert.AreEqual("organizationpassword", requestNotification.Holder.AssignedEntity.CertificateText);
             Assert.AreEqual("F", requestNotification.PatientContext.PatientPerson.AdministrativeGenderCode.Code);
+            Assert.AreEqual("aGCCS", requestNotification.PatientContext.PatientPerson.AdministrativeGenderCode.CodeSystem);
             Assert.AreEqual("8", requestNotification.PatientContext.Age.Value.Value);
             Assert.AreEqual("a", requestNotification.PatientContext.Age.Value.Unit);
             Assert.AreEqual("MEDLISTREV", requestNotification.TaskContext.Code.Code);
@@ -284,6 +286,20 @@ namespace Tests
             Assert.AreEqual("Q000008", requestNotification.SubTopic.Value.Code);
             Assert.AreEqual("2.16.840.1.113883.6.177", requestNotification.SubTopic.Value.CodeSystem);
             Assert.AreEqual("administration and dosage", requestNotification.SubTopic.Value.DisplayName);
+        }
+
+        [TestMethod]
+        public void ParseRequest_EmptyAndMissingValues()
+        {
+            const string testString =
+                @"subTopic.c.c=sTCC&subTopic.c.cs=sTCCS&subTopic.c.dn=sTCDN&&&&"
+                + "&mainSearchCriteria.c.c=&&&&";
+            var parser = new Parser();
+            KnowledgeRequestNotification requestNotification = parser.ParseRequest(testString);
+            Assert.AreEqual("sTCC", requestNotification.SubTopic.Value.Code);
+            Assert.AreEqual("sTCCS", requestNotification.SubTopic.Value.CodeSystem);
+            Assert.AreEqual("sTCDN", requestNotification.SubTopic.Value.DisplayName);
+            Assert.AreEqual("", requestNotification.MainSearchCriteria.Value.Code);
         }
     }
 }

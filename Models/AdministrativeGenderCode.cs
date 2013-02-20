@@ -8,6 +8,7 @@ namespace HL7InfobuttonAPI.Models
     public class AdministrativeGenderCode
     {
         public string Code { get; set; }
+        public string CodeSystem { get; set; }
         public string DisplayName { get; set; }
     }
 }
