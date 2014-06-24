@@ -287,7 +287,7 @@ namespace HL7InfobuttonAPI
                     //case "assignedEntity":
                     //    AddPart(??, keyParts.Skip(1), value);
                     //    break;
-                    break;
+                    //break;
                 case "n":
                     SetProperty(container, "Name", value);
                     break;
